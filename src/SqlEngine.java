@@ -26,6 +26,6 @@ public class SqlEngine {
         
         System.out.println("query: "+query);
         prsr.setQuery(query);
-        fr.getRecordSet(prsr.getListOfColumns(),prsr.getListOfTables(),prsr.getClause());
+        fr.getRecordSet(prsr.getListOfColumns(),prsr.getListOfTables(),prsr.getConditionList(),prsr.getClauseType());
     }
 }

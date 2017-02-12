@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Vector;
+import javafx.util.Pair;
 
 /**
  *
@@ -28,7 +29,7 @@ public class MyFileReader {
         this.prepareMetadata();
     }
     
-    public Vector< Vector<String> > getRecordSet(Vector<String> Columns, Vector<String> Tables, String Clause) throws IOException
+    public Vector< Vector<String> > getRecordSet(Vector<String> Columns, Vector<String> Tables, Vector< Pair<String,Pair<String,String> > > Clause, int Comparison_Type) throws IOException
     {
        Vector< Vector<String> > RecordSet = new Vector();
        Map <String, Vector< Vector<String> > > temp = new HashMap();
@@ -45,6 +46,8 @@ public class MyFileReader {
            temp.put(Tables.get(i), getDataFromTable(colnum,Tables.get(i)));
        }
        System.out.println(temp);
+       System.out.println(Clause);
+       System.out.println(Comparison_Type);
        return RecordSet;
     }
     

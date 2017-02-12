@@ -9,10 +9,14 @@ import gudusoft.gsqlparser.EDbVendor;
 import gudusoft.gsqlparser.ESqlStatementType;
 import gudusoft.gsqlparser.TCustomSqlStatement;
 import gudusoft.gsqlparser.TGSqlParser;
+import gudusoft.gsqlparser.nodes.TExpression;
 import gudusoft.gsqlparser.nodes.TJoin;
 import gudusoft.gsqlparser.nodes.TResultColumn;
 import gudusoft.gsqlparser.stmt.TSelectSqlStatement;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Vector;
+import javafx.util.Pair;
 
 /**
  *
@@ -72,12 +76,50 @@ public class MyParser {
         return res;
     }
     
-    public String getClause()
+    public int getClauseType()
     {
         TSelectSqlStatement pStmt = (TSelectSqlStatement)stmt;
         if(pStmt.getWhereClause()!=null)
-            return pStmt.getWhereClause().toString().substring(6);
-        return null;
+        {
+            switch(pStmt.getWhereClause().getCondition().getExpressionType())
+            {
+                case simple_comparison_t: return 0;
+                case logical_or_t: return 1;
+                case logical_and_t: return 2;
+            }
+        }
+        return -1;
+    }
+    
+    public Vector< Pair<String,Pair<String,String> > > getConditionList()
+    {
+        TSelectSqlStatement pStmt = (TSelectSqlStatement)stmt;
+        Vector< Pair<String,Pair<String,String> > > map = new Vector();
+        
+        if(pStmt.getWhereClause()==null) return map;
+        TExpression wexpr= pStmt.getWhereClause().getCondition();
+        
+        Pair<String,Pair<String,String> > expr;
+        Pair<String,String> operand;
+        
+        if(this.getClauseType()>0)
+        {
+            wexpr = pStmt.getWhereClause().getCondition().getLeftOperand();
+            operand = new Pair(wexpr.getLeftOperand().toString(),wexpr.getRightOperand().toString());
+            expr = new Pair(wexpr.getComparisonOperator().toString(),operand);
+            map.add(expr);   
+            wexpr = pStmt.getWhereClause().getCondition().getRightOperand();
+            operand = new Pair(wexpr.getLeftOperand().toString(),wexpr.getRightOperand().toString());
+            expr = new Pair(wexpr.getComparisonOperator().toString(),operand);
+            map.add(expr);    
+        }
+        else
+        {
+            operand = new Pair(wexpr.getLeftOperand().toString(),wexpr.getRightOperand().toString());
+            expr = new Pair(wexpr.getComparisonOperator().toString(),operand);
+            map.add(expr);
+        }
+        return map;
     }
     
 }
