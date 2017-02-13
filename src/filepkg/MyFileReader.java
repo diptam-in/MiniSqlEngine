@@ -111,48 +111,92 @@ public class MyFileReader {
                                         Vector< Pair<String,Pair<String,String> > > Clause,
                                         int Comparison_Type)
     {
-      Vector< Vector <String> > res_set = new Vector();
+        Vector< Vector <String> > res_set = new Vector();
     
-    
-        System.out.println(Tables);
-          int index1=-1,index2=-1;
-          String data1=Clause.get(0).getValue().getKey(),data2=Clause.get(0).getValue().getValue();
-          String tab1 = this.inTable(data1,Tables);
-          String tab2 = this.inTable(data2,Tables);
+        String data1,data2,tab1,tab2;
+        int index1,index2;
+        Vector<Vector<String> > all_data_clause;
+        Vector<String> data_clause;
+        Vector<Pair<Integer,Integer> > all_index = new Vector();
+        Vector<Pair<String,String> > all_table_of_index = new Vector();
+        Pair<Integer,Integer> temp_index;
+        Pair<String,String> temp_table_of_index;
+        
+        for(int i=0;i<Clause.size();i++)
+        {
+          index1=-1;index2=-1;
+          
+          data1=Clause.get(i).getValue().getKey();data2=Clause.get(i).getValue().getValue();
+          tab1 = this.inTable(data1,Tables);tab2 = this.inTable(data2,Tables);
+          
           if(tab1!=null)
             index1 = table_header.get(tab1).indexOf(data1);
           if(tab2!=null)
             index2 = table_header.get(tab2).indexOf(data2);
-        System.out.println("Comparison Type: "+Comparison_Type);
+          
+          temp_index = new Pair(index1,index2);
+          temp_table_of_index = new Pair(tab1,tab2);
+          
+          all_index.add(temp_index);
+          all_table_of_index.add(temp_table_of_index);
+        }
+        
+        System.out.println("All Indexes: "+ all_index);
+        System.out.println("All Table_of_Indexes: "+ all_table_of_index);
         /* When Number of table is one*/
-        if(Tables.size()==1)
+        if(Tables.size()==1) 
         {
             for(int j=0; j < table_data.get(Tables.get(0)).size();j++)
             {
-                if(index1>=0)
-                    data1= table_data.get(tab1).get(j).get(index1);
-                if(index2>=0)
-                    data2= table_data.get(tab2).get(j).get(index2);
-                if(evaluateComparison(Clause.get(0).getKey(),data1,data2))
+                data1=null;data2=null;
+                all_data_clause = new Vector();
+                for(int c=0;c<Clause.size();c++)
+                {
+                    data1=Clause.get(c).getValue().getKey();data2=Clause.get(c).getValue().getValue();
+                    if(all_index.get(c).getKey()>=0)
+                        data1= table_data.get(all_table_of_index.get(c).getKey()).get(j).get(all_index.get(c).getKey());
+                    if(all_index.get(c).getValue()>=0)
+                        data2= table_data.get(all_table_of_index.get(c).getValue()).get(j).get(all_index.get(c).getValue());
+                    data_clause = new Vector();
+                    data_clause.add(Clause.get(0).getKey());data_clause.add(data1);data_clause.add(data2);
+                    all_data_clause.add(data_clause);
+                }
+                
+                if(evaluateComparison(all_data_clause,Comparison_Type))
                     res_set.add(table_data.get(Tables.get(0)).get(j)); 
             }
         }
         /*When Number of tables is two*/
         if(Tables.size()==2)
-        {
+        {   int m=0;
             for(int j=0; j < table_data.get(Tables.get(0)).size();j++)
             {
-                for(int k =0 ; k < table_data.get(Tables.get(1)).size();k++)
+                for(int k =0; k < table_data.get(Tables.get(1)).size();k++)
                 {
-                    if(index1>=0)
-                        data1= table_data.get(tab1).get(k).get(index1);
-                    if(index2>=0)
-                        data2= table_data.get(tab2).get(k).get(index2);
-                    if(evaluateComparison(Clause.get(0).getKey(),data1,data2))
+                data1=null;data2=null;
+                all_data_clause = new Vector();
+                    for(int c=0;c<Clause.size();c++)
                     {
-                        
-                        Vector<String> temp_tab2 = new Vector<String>(table_data.get(Tables.get(1)).get(k));
-                        Vector<String> temp_tab1 = new Vector<String>(table_data.get(Tables.get(0)).get(j));
+                        m=k;
+                        data1=Clause.get(c).getValue().getKey();data2=Clause.get(c).getValue().getValue();
+                        if(all_index.get(c).getKey()>=0)
+                        {
+                            if(Tables.indexOf(all_table_of_index.get(c).getKey())==0) m=j;
+                            data1= table_data.get(all_table_of_index.get(c).getKey()).get(m).get(all_index.get(c).getKey());
+                        }
+                        if(all_index.get(c).getValue()>=0)
+                        {
+                            if(Tables.indexOf(all_table_of_index.get(c).getValue())==0) m=j;
+                            data2= table_data.get(all_table_of_index.get(c).getValue()).get(m).get(all_index.get(c).getValue());
+                        }
+                        data_clause = new Vector();
+                        data_clause.add(Clause.get(0).getKey());data_clause.add(data1);data_clause.add(data2);
+                        all_data_clause.add(data_clause);
+                    }
+                    if(evaluateComparison(all_data_clause,Comparison_Type))
+                    {                           
+                        Vector<String> temp_tab2 = new Vector(table_data.get(Tables.get(1)).get(k));
+                        Vector<String> temp_tab1 = new Vector(table_data.get(Tables.get(0)).get(j));
                         temp_tab1.addAll(temp_tab2);
                         res_set.add(temp_tab1); 
                     }
@@ -176,6 +220,48 @@ public class MyFileReader {
             case "!=" : return !a.equals(b);
             default : return true;
         }
+    }
+    
+    boolean evaluateComparison(Vector< Vector <String> > Clause, int comparison_type)
+    {
+        boolean temp,res;
+ 
+        Integer a = new Integer(Clause.get(0).get(1));
+        Integer b = new Integer(Clause.get(0).get(2));
+        switch(Clause.get(0).get(0))
+        {
+            case "=" : res= a.equals(b); break;
+            case "<" : res=(a<b); break;
+            case ">" : res=(a>b); break;
+            case "<=" : res=(a<=b); break;
+            case ">=" : res=(a>=b); break;
+            case "!=" : res=!a.equals(b); break;
+            default : res=true;
+        }
+
+        
+        for(int i=1;i<Clause.size();i++)
+        {
+                    
+        a = new Integer(Clause.get(i).get(1));
+        b = new Integer(Clause.get(i).get(2));
+        
+        switch(Clause.get(i).get(0))
+            {
+                case "=" : temp=a.equals(b);break;
+                case "<" : temp=(a<b);break;
+                case ">" : temp=(a>b);break;
+                case "<=" : temp=(a<=b);break;
+                case ">=" : temp=(a>=b);break;
+                case "!=" : temp=!a.equals(b);break;
+                default : temp=true;
+            }
+            if(comparison_type==1)
+                res= res||temp;
+            if(comparison_type==2)
+                res= res && temp;
+        }
+        return res;
     }
     
     String inTable(String col,Vector<String> Tables)
