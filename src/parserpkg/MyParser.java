@@ -49,8 +49,11 @@ public class MyParser {
             }
             return false;
         }
-        return false;
-
+        else
+        {
+            System.out.println(sqlparser.getErrormessage());
+            return false;
+        }
     }
     
     public Vector<String> getListOfColumns()

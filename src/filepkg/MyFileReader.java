@@ -43,6 +43,17 @@ public class MyFileReader {
        Vector <String> header;
        Vector<Integer> colnum;
        
+       String agrt=null,func=null;
+       int a;
+        if((a = this.hasAggregate(Columns))>=0)
+        {
+            agrt = this.getAggregateColumn(Columns,a);
+            func = this.getAggregateFunc(Columns, a);
+            Columns.remove(a);
+            Columns.add(a, agrt);
+        }
+        System.out.println(Columns+" "+agrt+" "+func);
+       
        int col;
        for(int i = 0; i < Tables.size();i++)
        {
@@ -63,13 +74,36 @@ public class MyFileReader {
            table_data.put(Tables.get(i), getDataFromTable(colnum,Tables.get(i)));
        }
        System.out.println(table_header);
-       System.out.println(table_data);
-       System.out.println(Clause);
-       System.out.println(Comparison_Type);
+       //System.out.println(Columns);
+       
+//       System.out.println(Clause);
+//       System.out.println(Comparison_Type);
        RecordSet = this.applyClauses(table_data, table_header, Tables, Clause, Comparison_Type);
+       if(a>=0)
+       {
+          RecordSet = new Aggregate().getResult(func, a, RecordSet);
+       }
        return RecordSet;
     }
-    
+    int hasAggregate(Vector<String> Columns)
+    {
+        int count =-1;
+        for(String s : Columns)
+        {
+            if(s.startsWith("Max(")||s.startsWith("Min(")||s.startsWith("Avg(")||
+                    s.startsWith("Sum(")||s.startsWith("("))
+                return ++count;
+        }
+        return -1;
+    }
+    String getAggregateColumn(Vector<String> Columns,int i)
+    {
+        return Columns.get(i).substring(Columns.get(i).indexOf("(")+1,Columns.get(i).length()-1);
+    }
+     String getAggregateFunc(Vector<String> Columns,int i)
+    {
+        return Columns.get(i).substring(0,Columns.get(i).indexOf("("));
+    }
     Vector< Vector<String> > getDataFromTable(Vector<Integer> colnum, String tab) throws FileNotFoundException, IOException
     {
         Vector< Vector<String> > res = new Vector(); 
@@ -140,9 +174,7 @@ public class MyFileReader {
           all_index.add(temp_index);
           all_table_of_index.add(temp_table_of_index);
         }
-        
-        System.out.println("All Indexes: "+ all_index);
-        System.out.println("All Table_of_Indexes: "+ all_table_of_index);
+
         /* When Number of table is one*/
         if(Tables.size()==1) 
         {
@@ -225,7 +257,8 @@ public class MyFileReader {
     boolean evaluateComparison(Vector< Vector <String> > Clause, int comparison_type)
     {
         boolean temp,res;
- 
+        if(Clause.size()==0)
+            return true;
         Integer a = new Integer(Clause.get(0).get(1));
         Integer b = new Integer(Clause.get(0).get(2));
         switch(Clause.get(0).get(0))
