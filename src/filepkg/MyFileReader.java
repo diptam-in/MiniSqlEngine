@@ -14,6 +14,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Vector;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.util.Pair;
 
 /**
@@ -29,7 +31,7 @@ public class MyFileReader {
         this.prepareMetadata();
     }
     
-    public Vector< Vector<String> > getRecordSet(Vector<String> Columns, Vector<String> Tables, Vector< Pair<String,Pair<String,String> > > Clause, int Comparison_Type) throws IOException
+    public Vector< Vector<String> > getRecordSet(Vector<String> Columns, Vector<String> Tables, Vector< Pair<String,Pair<String,String> > > Clause, int Comparison_Type) throws IOException, TableDoesNotExistExecption, MultipleAggregateFunctionException
     {
        Vector< Vector<String> > RecordSet = new Vector();
        if(Columns.get(0).equals("*"))
@@ -37,6 +39,17 @@ public class MyFileReader {
            Columns.clear();
            for(String t: Tables)
            Columns.addAll(metadata.get(t));
+       }
+       /*Check Whether all the table exist or not*/
+       for(int i=0;i<Tables.size();i++)
+       {
+           if(!metadata.containsKey(Tables.get(i)))
+               throw new TableDoesNotExistExecption(Tables.get(i));
+       }
+       /*Check Whether all the Column exist or not*/
+       for(int i=0;i<Columns.size();i++)
+       {
+           inTable(Columns.get(i),Tables);
        }
        Map <String, Vector< Vector<String> > > table_data = new HashMap();
        Map <String, Vector<String> > table_header = new HashMap();
@@ -52,7 +65,6 @@ public class MyFileReader {
             Columns.remove(a);
             Columns.add(a, agrt);
         }
-        System.out.println(Columns+" "+agrt+" "+func);
        
        int col;
        for(int i = 0; i < Tables.size();i++)
@@ -62,22 +74,24 @@ public class MyFileReader {
            
            for(int j=0;j<Columns.size();j++)
            { 
+               //System.out.println("line 64: "+Columns.get(j)+" "+Tables.get(i)+" "+isInTable(Columns.get(j),Tables.get(i)));
                if((col=isInTable(Columns.get(j),Tables.get(i)))>=0)
                {
+                  //System.out.println("line:67 table "+i+" "+Columns.get(j));
                   colnum.add(col);
-                  header.add(Columns.get(j));
-                  
+                  if(Columns.get(j).contains("."))
+                      header.add(Columns.get(j).substring(Columns.get(j).indexOf(".")+1).trim());
+                  else
+                      header.add(Columns.get(j));
+                  //System.out.println("Iteration "+j+" "+header);
                }
            }
            
            table_header.put(Tables.get(i), header);
            table_data.put(Tables.get(i), getDataFromTable(colnum,Tables.get(i)));
        }
-       System.out.println(table_header);
-       //System.out.println(Columns);
-       
-//       System.out.println(Clause);
-//       System.out.println(Comparison_Type);
+       //System.out.println(table_header);
+
        RecordSet = this.applyClauses(table_data, table_header, Tables, Clause, Comparison_Type);
        if(a>=0)
        {
@@ -85,16 +99,22 @@ public class MyFileReader {
        }
        return RecordSet;
     }
-    int hasAggregate(Vector<String> Columns)
+    int hasAggregate(Vector<String> Columns) throws MultipleAggregateFunctionException
     {
-        int count =-1;
+        boolean flag=true;
+        int j=-1,count =-1;
         for(String s : Columns)
         {
+            count++;
             if(s.startsWith("Max(")||s.startsWith("Min(")||s.startsWith("Avg(")||
-                    s.startsWith("Sum(")||s.startsWith("("))
-                return ++count;
+                    s.startsWith("Sum(")||s.startsWith("(")){
+                        j=count;
+                        if(!flag)
+                            throw new MultipleAggregateFunctionException();
+                        flag=false;
+            }
         }
-        return -1;
+        return j;
     }
     String getAggregateColumn(Vector<String> Columns,int i)
     {
@@ -146,7 +166,7 @@ public class MyFileReader {
                                         int Comparison_Type)
     {
         Vector< Vector <String> > res_set = new Vector();
-    
+        //System.out.println(Clause);
         String data1,data2,tab1,tab2;
         int index1,index2;
         Vector<Vector<String> > all_data_clause;
@@ -160,9 +180,14 @@ public class MyFileReader {
         {
           index1=-1;index2=-1;
           
-          data1=Clause.get(i).getValue().getKey();data2=Clause.get(i).getValue().getValue();
+          data1=Clause.get(i).getValue().getKey();
+          data2=Clause.get(i).getValue().getValue();
+          //System.out.println(data1+" "+data2);
           tab1 = this.inTable(data1,Tables);tab2 = this.inTable(data2,Tables);
-          
+          //System.out.println(tab1+" "+tab2);
+          if(data1.contains(".")) data1 = data1.substring(data1.indexOf(".")+1);
+          if(data2.contains(".")) data2 = data2.substring(data2.indexOf(".")+1);
+          //System.out.println(table_header);
           if(tab1!=null)
             index1 = table_header.get(tab1).indexOf(data1);
           if(tab2!=null)
@@ -185,6 +210,9 @@ public class MyFileReader {
                 for(int c=0;c<Clause.size();c++)
                 {
                     data1=Clause.get(c).getValue().getKey();data2=Clause.get(c).getValue().getValue();
+                    if(data1.contains(".")) data1 = data1.substring(data1.indexOf(".")+1);
+                    if(data2.contains(".")) data2 = data2.substring(data2.indexOf(".")+1);
+                    
                     if(all_index.get(c).getKey()>=0)
                         data1= table_data.get(all_table_of_index.get(c).getKey()).get(j).get(all_index.get(c).getKey());
                     if(all_index.get(c).getValue()>=0)
@@ -210,7 +238,11 @@ public class MyFileReader {
                     for(int c=0;c<Clause.size();c++)
                     {
                         m=k;
+                        //System.out.println(Clause+"\n"+all_index);
                         data1=Clause.get(c).getValue().getKey();data2=Clause.get(c).getValue().getValue();
+                        if(data1.contains(".")) data1 = data1.substring(data1.indexOf(".")+1);
+                        if(data2.contains(".")) data2 = data2.substring(data2.indexOf(".")+1);
+                        //System.out.println(data1+" "+data2);
                         if(all_index.get(c).getKey()>=0)
                         {
                             if(Tables.indexOf(all_table_of_index.get(c).getKey())==0) m=j;
@@ -225,6 +257,7 @@ public class MyFileReader {
                         data_clause.add(Clause.get(0).getKey());data_clause.add(data1);data_clause.add(data2);
                         all_data_clause.add(data_clause);
                     }
+                    //System.out.println(all_data_clause);
                     if(evaluateComparison(all_data_clause,Comparison_Type))
                     {                           
                         Vector<String> temp_tab2 = new Vector(table_data.get(Tables.get(1)).get(k));
@@ -299,6 +332,18 @@ public class MyFileReader {
     
     String inTable(String col,Vector<String> Tables)
     {
+        System.out.println(col);
+        if(col.contains("."))
+        {
+            String s = col.substring(0,col.indexOf("."));
+            if(!metadata.get(s).contains(col.substring(col.indexOf(".")+1)))
+                try {
+                    throw new ColumnDoesNotExistException(col);
+            } catch (ColumnDoesNotExistException ex) {
+                Logger.getLogger(MyFileReader.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            return col.substring(0,col.indexOf("."));
+        }
         for(String s: Tables)
         {
             if(metadata.get(s).indexOf(col)>=0)
@@ -308,6 +353,8 @@ public class MyFileReader {
     }
     int isInTable(String col, String tab)
     {
+        if(col.contains("."))
+            return metadata.get(tab).indexOf(col.substring(col.indexOf(".")+1).trim());
         if(col.equals("*"))
             return 999;
         int loc = metadata.get(tab).indexOf(col);

@@ -1,5 +1,7 @@
 
+import filepkg.MultipleAggregateFunctionException;
 import filepkg.MyFileReader;
+import filepkg.TableDoesNotExistExecption;
 import java.io.IOException;
 import java.util.Vector;
 import parserpkg.MyParser;
@@ -15,7 +17,7 @@ import parserpkg.MyParser;
  * @author diptam
  */
 public class SqlEngine {
-    public static void main(String args[]) throws IOException
+    public static void main(String args[]) throws IOException, TableDoesNotExistExecption, MultipleAggregateFunctionException
     {
         
         MyParser prsr = new MyParser();
@@ -25,7 +27,7 @@ public class SqlEngine {
         for(String s : args)
             query+=s+" ";
         
-        System.out.println("query: "+query);
+        System.out.println("query: "+query+"\n\n");
         prsr.setQuery(query);
         Vector <String> header = prsr.getListOfColumns();
         Vector< Vector<String> > Result = fr.getRecordSet(header,prsr.getListOfTables(),prsr.getConditionList(),prsr.getClauseType());

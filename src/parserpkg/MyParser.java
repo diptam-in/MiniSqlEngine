@@ -13,6 +13,7 @@ import gudusoft.gsqlparser.nodes.TExpression;
 import gudusoft.gsqlparser.nodes.TJoin;
 import gudusoft.gsqlparser.nodes.TResultColumn;
 import gudusoft.gsqlparser.stmt.TSelectSqlStatement;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
@@ -36,7 +37,29 @@ public class MyParser {
     }
     public boolean setQuery(String text)
     {
-        sqlparser.sqltext = text;
+        String[] temp = text.split(" ");
+        
+        String res="";
+        for(int i=0;i<temp.length;i++)
+        {
+            //System.out.println(temp[i]);
+            if(temp[i].equals("DISTINCT"))
+            {
+                temp[i]=" ";
+                temp[i+1]="("+temp[i+1]+")";
+                i++;
+            }
+            if(temp[i].startsWith("DISTINCT("))
+            {
+               temp[i]=temp[i].substring(temp[i].indexOf("("));
+               i++; 
+            }
+        }
+        
+        for(String s:temp)
+            res+=s+" ";
+        //System.out.println(res);
+        sqlparser.sqltext = res;
         int flag = sqlparser.parse();
         if(flag==0)
         {
@@ -76,6 +99,7 @@ public class MyParser {
             TJoin sub = pStmt.joins.getJoin(i);
             res.add(sub.getTable().toString());
         }
+        
         return res;
     }
     
