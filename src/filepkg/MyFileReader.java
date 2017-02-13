@@ -32,22 +32,41 @@ public class MyFileReader {
     public Vector< Vector<String> > getRecordSet(Vector<String> Columns, Vector<String> Tables, Vector< Pair<String,Pair<String,String> > > Clause, int Comparison_Type) throws IOException
     {
        Vector< Vector<String> > RecordSet = new Vector();
-       Map <String, Vector< Vector<String> > > temp = new HashMap();
+       if(Columns.get(0).equals("*"))
+       {
+           Columns.clear();
+           for(String t: Tables)
+           Columns.addAll(metadata.get(t));
+       }
+       Map <String, Vector< Vector<String> > > table_data = new HashMap();
+       Map <String, Vector<String> > table_header = new HashMap();
+       Vector <String> header;
        Vector<Integer> colnum;
+       
        int col;
        for(int i = 0; i < Tables.size();i++)
        {
            colnum = new Vector();
+           header = new Vector();
+           
            for(int j=0;j<Columns.size();j++)
            { 
                if((col=isInTable(Columns.get(j),Tables.get(i)))>=0)
+               {
                   colnum.add(col);
+                  header.add(Columns.get(j));
+                  
+               }
            }
-           temp.put(Tables.get(i), getDataFromTable(colnum,Tables.get(i)));
+           
+           table_header.put(Tables.get(i), header);
+           table_data.put(Tables.get(i), getDataFromTable(colnum,Tables.get(i)));
        }
-       System.out.println(temp);
+       System.out.println(table_header);
+       System.out.println(table_data);
        System.out.println(Clause);
        System.out.println(Comparison_Type);
+       RecordSet = this.applyClauses(table_data, table_header, Tables, Clause, Comparison_Type);
        return RecordSet;
     }
     
@@ -86,6 +105,88 @@ public class MyFileReader {
         return res;
     }
     
+    Vector< Vector<String> > applyClauses(Map <String, Vector< Vector<String> > > table_data,
+                                        Map <String, Vector<String> > table_header,
+                                        Vector<String> Tables,
+                                        Vector< Pair<String,Pair<String,String> > > Clause,
+                                        int Comparison_Type)
+    {
+      Vector< Vector <String> > res_set = new Vector();
+    
+    
+        System.out.println(Tables);
+          int index1=-1,index2=-1;
+          String data1=Clause.get(0).getValue().getKey(),data2=Clause.get(0).getValue().getValue();
+          String tab1 = this.inTable(data1,Tables);
+          String tab2 = this.inTable(data2,Tables);
+          if(tab1!=null)
+            index1 = table_header.get(tab1).indexOf(data1);
+          if(tab2!=null)
+            index2 = table_header.get(tab2).indexOf(data2);
+        System.out.println("Comparison Type: "+Comparison_Type);
+        /* When Number of table is one*/
+        if(Tables.size()==1)
+        {
+            for(int j=0; j < table_data.get(Tables.get(0)).size();j++)
+            {
+                if(index1>=0)
+                    data1= table_data.get(tab1).get(j).get(index1);
+                if(index2>=0)
+                    data2= table_data.get(tab2).get(j).get(index2);
+                if(evaluateComparison(Clause.get(0).getKey(),data1,data2))
+                    res_set.add(table_data.get(Tables.get(0)).get(j)); 
+            }
+        }
+        /*When Number of tables is two*/
+        if(Tables.size()==2)
+        {
+            for(int j=0; j < table_data.get(Tables.get(0)).size();j++)
+            {
+                for(int k =0 ; k < table_data.get(Tables.get(1)).size();k++)
+                {
+                    if(index1>=0)
+                        data1= table_data.get(tab1).get(k).get(index1);
+                    if(index2>=0)
+                        data2= table_data.get(tab2).get(k).get(index2);
+                    if(evaluateComparison(Clause.get(0).getKey(),data1,data2))
+                    {
+                        
+                        Vector<String> temp_tab2 = new Vector<String>(table_data.get(Tables.get(1)).get(k));
+                        Vector<String> temp_tab1 = new Vector<String>(table_data.get(Tables.get(0)).get(j));
+                        temp_tab1.addAll(temp_tab2);
+                        res_set.add(temp_tab1); 
+                    }
+                }
+            }
+        }
+      return res_set;
+    }
+    
+    boolean evaluateComparison(String operator, String op1, String op2)
+    {
+        Integer a = new Integer(op1);
+        Integer b = new Integer(op2);
+        switch(operator)
+        {
+            case "=" : return a.equals(b);
+            case "<" : return (a<b);
+            case ">" : return (a>b);
+            case "<=" : return (a<=b);
+            case ">=" : return (a>=b);
+            case "!=" : return !a.equals(b);
+            default : return true;
+        }
+    }
+    
+    String inTable(String col,Vector<String> Tables)
+    {
+        for(String s: Tables)
+        {
+            if(metadata.get(s).indexOf(col)>=0)
+                   return s;
+        }
+        return null;
+    }
     int isInTable(String col, String tab)
     {
         if(col.equals("*"))

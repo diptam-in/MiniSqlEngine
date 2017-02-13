@@ -1,6 +1,7 @@
 
 import filepkg.MyFileReader;
 import java.io.IOException;
+import java.util.Vector;
 import parserpkg.MyParser;
 
 /*
@@ -26,6 +27,19 @@ public class SqlEngine {
         
         System.out.println("query: "+query);
         prsr.setQuery(query);
-        fr.getRecordSet(prsr.getListOfColumns(),prsr.getListOfTables(),prsr.getConditionList(),prsr.getClauseType());
+        Vector <String> header = prsr.getListOfColumns();
+        Vector< Vector<String> > Result = fr.getRecordSet(header,prsr.getListOfTables(),prsr.getConditionList(),prsr.getClauseType());
+    
+        for(String s: header)
+            System.out.print(s+"\t");
+        System.out.println();
+        
+        for(int i=0;i<Result.size();i++)
+        {
+            for(int j=0;j<Result.get(i).size();j++)
+                System.out.print(Result.get(i).get(j)+"\t");
+            System.out.println();
+        }
+    
     }
 }
